@@ -33,7 +33,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
     #mainPanel(plotOutput("chem_count_map"),
     mainPanel(plotOutput("RQ_map", width = 800, height = 400),
     mainPanel(plotOutput("Gi_plot", width = 800, height = 400),
-    mainPanel(plotOutput("heatmap_plot", width = 800, height = 400)
+    mainPanel(plotOutput("heatmap_plot", width = 800, height = 350)
     )
     )
     )
@@ -84,7 +84,7 @@ server <- function(input, output) {
       scale_fill_distiller(palette = "YlGnBu", direction = -1) +
       labs(y="Assay", x="Chemical", fill = "ACC (μM)")+
       theme(axis.text.x = element_text(angle = 45, hjust=1))+
-      theme(text = element_text(size = 14)) 
+      theme(text = element_text(size = 16)) 
 
     print(heatmap_plot)
   
