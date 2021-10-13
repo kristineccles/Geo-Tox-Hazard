@@ -19,7 +19,8 @@ library(spdep)
 library(maps)
 library(vroom)
 
-# Import data
+#####################################################################################
+#### Import data ####
 
 ice_data <- get(load("GeoToxHazard-App/data/210105_ICE_cHTS_invitrodbv33.Rdata"))
 ice_data <- subset(ice_data, new_hitc == 1)
@@ -52,6 +53,8 @@ county_2014<- subset(county_2014,  STATEFP != "72" )
 county_2014<- subset(county_2014,  STATEFP != "78" )
 county_2014$countyid <-as.numeric(paste0(county_2014$STATEFP, county_2014$COUNTYFP))
 
+#####################################################################################
+#### Prepare data ####
 # Determine what the overlap between NATA chemicals and tox21 chemicals
 # Join NATA and TOX21
 nata_tox21 <- merge(ice_data[,c("casn", "aenm", "AC50", "ACC")], nata_chemicals,  by.x = "casn", by.y = "casrn") # n = 3533
@@ -83,6 +86,7 @@ nata_tox21$AVERAGE_MASS <- as.numeric(nata_tox21$AVERAGE_MASS)
 nata_tox21$conc_uM <- nata_tox21$concentration * 10^-9 / nata_tox21$AVERAGE_MASS *10^6
 nata_tox21$weight <- (nata_tox21$conc_uM*24*365*70)/(nata_tox21$ACC/1000)
 
+##############################################################################################3
 #### Assay Heat Map ####
 
 heatmap_df<- as.data.frame(nata_tox21) %>%
@@ -103,8 +107,7 @@ colnames(nata_tox21_df) <-c("FIPS", "assay_name", "sum_HQ")
 
 nata_tox21_tbl <-as.data.frame(dcast(nata_tox21_df, FIPS ~ assay_name, mean))
 nata_tox21_tbl <- nata_tox21_tbl[, colSums(nata_tox21_tbl != 0) > 0]
-summary(nata_tox21_tbl)
-
+nata_tox21_tbl <-na.omit(nata_tox21_tbl)
 # add geography 
 nata_tox21_sp <- left_join(county_2014, nata_tox21_tbl, by=c("countyid" = "FIPS"), keep=FALSE)
 #save df for Shiny App
@@ -115,24 +118,44 @@ assay_list <- as.data.frame(unique(nata_tox21_df$assay_name))
 colnames(assay_list) <- "assay"
 write.csv(assay_list, "GeoToxHazard-App/assay_list.csv", row.names = FALSE)
 
+
+#### Count Map ####
+nata_tox21$count <- 1
+count_df<- as.data.frame(nata_tox21) %>%
+  group_by(FIPS, aenm, web_name.x) %>%
+  summarise(sum=sum(count))
+count_df <- as.data.frame(count_df)
+colnames(count_df) <- c("FIPS", "assay_name", "chem_count")
+
+
+count_tbl <-as.data.frame(dcast(count_df, FIPS ~ assay_name, sum))
+
+
+# add geography 
+chem_count_sp <- left_join(county_2014, count_tbl, by=c("countyid" = "FIPS"), keep=FALSE)
+#save df for Shiny App
+saveRDS(chem_count_sp, "GeoToxHazard-App/chem_count_sp.rds")
+
+
 #### GI Plot ####
 
 #Gi* Cluster analysis
 # find the neighbours - queens case
 neighbours <- poly2nb(nata_tox21_sp, queen=TRUE) 
+weighted_neighbours <- nb2listw(include.self(neighbours), zero.policy = TRUE, style="W")
 
-#Gi*
-nata_tox21_sp$local_g<- as.matrix(localG(weight_county_tpo_sf$sum,
-                                                nb2listw(include.self(neighbours_tpo),zero.policy = TRUE, style="W")))
+gi_function <- function(x) localG(x, listw=weighted_neighbours, zero.policy=TRUE )
+gi_matrix <- as.list(st_drop_geometry(na.omit(nata_tox21_sp[,11:653])))
+local_g_unlist<- t(do.call(rbind,lapply(gi_matrix, gi_function)))
+local_g<- as.data.frame(cbind(nata_tox21_sp$countyid, local_g_unlist))
+colnames(local_g)[1] <- c("FIPS")
 
-# classify based on 95% CI
-weight_county_tpo_sf$Gi_pval = as.factor(weight_county_tpo_sf$local_g >= 3.886 |  weight_county_tpo_sf$local_g <= -3.886) 
-
-
-
-
-
-
-
+# add geography back
+localG_sp <- left_join(county_2014, local_g, by=c("countyid" = "FIPS"), keep=FALSE)
+#save df for Shiny App
+saveRDS(localG_sp, "GeoToxHazard-App/localG_sp.rds")
 
 
+a =subset(localG_df, NCCT_TPO_AUR_dn >= 3.886 |  NCCT_TPO_AUR_dn <= -3.886)
+a$NCCT_TPO_AUR_dn
+b= as.data.frame(localG_df$NCCT_TPO_AUR_dn)
