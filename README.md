@@ -2,8 +2,6 @@
 
 This GitHub page contains the code and input data for the high throughput environmental chemical hazard mapping tool. Input data are obtained from the [US EPA National Air Toxics Assessment](https://www.epa.gov/national-air-toxics-assessment/2014-national-air-toxics-assessment) (NATA) and the [NTP Integrated Chemical Environment](https://ice.ntp.niehs.nih.gov) (ICE-TOX21). More information on the assays used can be found on the [US EPA CompTox Dashboard](https://comptox.epa.gov/dashboard)
 
-This Shiny app complements the paper entitled "A geospatial modeling approach to quantifying the risk of exposure to environmental chemical mixtures via a common molecular initiating event". This paper demonstrates how environmental chemical concentrations of chemicals can be integrated with hazard data from TOX21 high throughput assays using a common molecular initiating event (the assay) to spatial patterns of risk from exposure to complex mixtures.
-
 
 ### Code ###
 Key elements of the analysis code are as follows:
