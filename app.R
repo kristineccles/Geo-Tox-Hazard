@@ -5,15 +5,16 @@ library(maps)
 library(mapproj)
 library(ggplot2)
 library(sf)
+library(rsconnect)
 
 # Load data ----
-RQ_df <- readRDS("GeoToxHazard-App/nata_tox21_sp.rds")
-assay_list <-read.csv("GeoToxHazard-App/assay_list.csv")
+RQ_df <- readRDS("https://raw.githubusercontent.com/kristineccles/geo_tox_hazard/main/GeoToxHazard-App/nata_tox21_sp.rds")
+assay_list <-read.csv("https://raw.githubusercontent.com/kristineccles/geo_tox_hazard/main/GeoToxHazard-App/assay_list.csv")
 assay_list <- as.list(assay_list)
 states <- st_as_sf(maps::map("state", plot = FALSE, fill = TRUE))
-heatmap_df <- read.csv("GeoToxHazard-App/heatmap_df.csv")
-chem_count_df <- readRDS("GeoToxHazard-App/chem_count_sp.rds")
-localG_df <- readRDS("GeoToxHazard-App/localG_sp.rds")
+heatmap_df <- read.csv("https://raw.githubusercontent.com/kristineccles/geo_tox_hazard/main/GeoToxHazard-App/heatmap_df.csv")
+chem_count_df <- readRDS("https://raw.githubusercontent.com/kristineccles/geo_tox_hazard/main/GeoToxHazard-App/chem_count_sp.rds")
+localG_df <- readRDS("https://raw.githubusercontent.com/kristineccles/geo_tox_hazard/main/GeoToxHazard-App/localG_sp.rds")
 
 # User interface ----
 ui <- fluidPage(theme = shinytheme("flatly"),
