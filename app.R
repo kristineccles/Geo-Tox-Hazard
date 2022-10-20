@@ -5,36 +5,44 @@ library(maps)
 library(mapproj)
 library(ggplot2)
 library(sf)
+library(readr)
 library(rsconnect)
+library(forcats)
 
 # Load data ----
-RQ_df <- read.csv("https://raw.githubusercontent.com/kristineccles/geo_tox_hazard/main/GeoToxHazard-App/nata_tox21_sp.csv")
-assay_list <-read.csv("https://raw.githubusercontent.com/kristineccles/geo_tox_hazard/main/GeoToxHazard-App/assay_list.csv")
+
+RQ_df <-  readr::read_rds("GeoToxHazard-App/nata_tox21_sp.rds")
+assay_list <- read.csv("GeoToxHazard-App/assay_list.csv",stringsAsFactors=FALSE, sep=",", header=TRUE)
 assay_list <- as.list(assay_list)
 states <- st_as_sf(maps::map("state", plot = FALSE, fill = TRUE))
-heatmap_df <- read.csv("https://raw.githubusercontent.com/kristineccles/geo_tox_hazard/main/GeoToxHazard-App/heatmap_df.csv")
-chem_count_df <- read.csv("https://raw.githubusercontent.com/kristineccles/geo_tox_hazard/main/GeoToxHazard-App/chem_count_sp.csv")
-localG_df <- read.csv("https://raw.githubusercontent.com/kristineccles/geo_tox_hazard/main/GeoToxHazard-App/localG_sp.csv")
+heatmap_df <- read.csv("GeoToxHazard-App/heatmap_df.csv", stringsAsFactors=FALSE, sep=",", header=TRUE)
+chem_count_df <- readr::read_rds("GeoToxHazard-App/chem_count_sp.rds")
+localG_df <- readr::read_rds("GeoToxHazard-App/localG_sp.rds")
 
 # User interface ----
 ui <- fluidPage(theme = shinytheme("flatly"),
-  titlePanel("NATA TOX21"),
+  titlePanel("Risk of Molecular Target Activation From Exposure to Chemical Mixtures"),
   
   sidebarLayout(
     sidebarPanel(
-      helpText("Create culumative hazard quotient maps for complex mixtures acting on molecular initiating events."),
+      helpText("Calculate the cumulative hazard quotient maps for chemical mixtures acting on molecular targets", 
+               br(),
+               "Exposure Data: National Air Toxics Assessment (NATA)",
+               br(),
+               "Hazard Data: TOX21 High Throughput Screening Assays"),
       
       selectInput(inputId = "assay", 
-                  label = "Choose a variable to display",
+                  label = "Select an assay:",
                   choices = assay_list,
                   selected = "LTEA_HepaRG_CYP1A1_up"),
       
     ),
     
-    #mainPanel(plotOutput("chem_count_map"),
+    #mainPanel(plotOutput("chem_count_map", width = 800, height = 400),
+    mainPanel(plotOutput("heatmap_plot", width = 1000, height = 350),
     mainPanel(plotOutput("RQ_map", width = 800, height = 400),
-    mainPanel(plotOutput("Gi_plot", width = 800, height = 400),
-    mainPanel(plotOutput("heatmap_plot", width = 800, height = 350)
+    mainPanel(plotOutput("Gi_plot", width = 800, height = 400)
+    #)
     )
     )
     )
@@ -56,10 +64,9 @@ server <- function(input, output) {
     chem_count_map <- ggplot(data = chem_count_df, aes(fill = get(input$assay))) +
       geom_sf(lwd = 0)+
       theme_bw()+
-      labs(fill="Chemical Count")+
       geom_sf(data = states, fill = NA, size=0.15)+
       #scale_fill_viridis_c(direction=-1)+
-      scale_fill_distiller(name="# Chemicals", palette = "YlGnBu", direction = 1) +
+      scale_fill_distiller(name="Chemical Count", palette = "YlGnBu", direction = 1) +
       theme(text = element_text(size = 14)) 
     print(chem_count_map)
   })
@@ -68,9 +75,8 @@ server <- function(input, output) {
     
     RQ_map <- ggplot(data = RQ_df, aes(fill = get(input$assay))) +
       geom_sf(lwd = 0)+
-      scale_fill_distiller(name="RQ Sum", palette = "YlGnBu", direction = 1, trans = "sqrt") +
+      scale_fill_distiller(name="Summed Hazard Quotients", palette = "YlGnBu", direction = 1, trans = "sqrt") +
       theme_bw()+
-      labs(fill="RQ Sum")+
       geom_sf(data = states, fill = NA, size=0.15)+
       theme(text = element_text(size = 14)) 
     print(RQ_map)
@@ -78,12 +84,13 @@ server <- function(input, output) {
   
   output$heatmap_plot<- renderPlot({
     
-    heatmap_plot <- ggplot(data = subset(heatmap_df, assay_name == input$assay), aes (chemical_name, assay_name,  fill= ACC)) + 
+    heatmap_plot <- 
+      ggplot(data = subset(heatmap_df, assay_name == input$assay), aes (fct_reorder(chemical_name, ACC), assay_name,  fill= ACC)) + 
       geom_tile()+
       theme_bw()+
       #scale_fill_viridis_c(direction=-1)+
       scale_fill_distiller(palette = "YlGnBu", direction = -1) +
-      labs(y="Assay", x="Chemical", fill = "ACC (μM)")+
+      labs(y="Assay", x="Chemical", fill = "Activity Concentration Cutoff (μM)")+
       theme(axis.text.x = element_text(angle = 45, hjust=1))+
       theme(text = element_text(size = 16)) 
 
@@ -96,7 +103,7 @@ server <- function(input, output) {
     Gi_plot <-  ggplot() +
       geom_sf(data = localG_df, aes(fill = get(input$assay)), lwd = 0)+  
       scale_fill_gradient2(high = "#C41E3A", mid = "white", low = "#000080", midpoint = 0, 
-                           guide = guide_colourbar(title = "Gi* score"))+
+                           guide = guide_colourbar(title = "Gi* Score"))+
       geom_sf(data = subset(localG_df, get(input$assay) > 3.886 | get(input$assay) < -3.886), fill = NA, size=0.25)+
       geom_sf(data = states, fill = NA, size=0.15)+
       theme_bw()+
