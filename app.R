@@ -8,6 +8,7 @@ library(sf)
 library(readr)
 library(rsconnect)
 library(forcats)
+library(scales)
 
 # Load data ----
 
@@ -25,7 +26,9 @@ ui <- fluidPage(theme = shinytheme("flatly"),
   
   sidebarLayout(
     sidebarPanel(
-      helpText("Calculate the cumulative hazard quotient maps for chemical mixtures acting on molecular targets", 
+      helpText ("Calculate the cumulative hazard quotient maps for chemical mixtures acting on molecular targets", 
+               br(),
+               "  ",
                br(),
                "Exposure Data: National Air Toxics Assessment (NATA)",
                br(),
@@ -38,11 +41,11 @@ ui <- fluidPage(theme = shinytheme("flatly"),
       
     ),
     
-    #mainPanel(plotOutput("chem_count_map", width = 800, height = 400),
+    mainPanel(plotOutput("chem_count_map", width = 800, height = 400),
     mainPanel(plotOutput("heatmap_plot", width = 1000, height = 350),
     mainPanel(plotOutput("RQ_map", width = 800, height = 400),
     mainPanel(plotOutput("Gi_plot", width = 800, height = 400)
-    #)
+    )
     )
     )
     )
@@ -60,13 +63,11 @@ server <- function(input, output) {
   
   
   output$chem_count_map <- renderPlot({
-    
-    chem_count_map <- ggplot(data = chem_count_df, aes(fill = get(input$assay))) +
-      geom_sf(lwd = 0)+
-      theme_bw()+
+    chem_count_map <- ggplot(data = subset(chem_count_df, assay_name == input$assay)) +
+      geom_sf(aes(fill = chem_count), lwd = 0)+  
+      scale_fill_distiller(name="Chemical Count", palette = "YlGnBu", direction = 1, breaks= pretty_breaks()) +
       geom_sf(data = states, fill = NA, size=0.15)+
-      #scale_fill_viridis_c(direction=-1)+
-      scale_fill_distiller(name="Chemical Count", palette = "YlGnBu", direction = 1) +
+      theme_bw()+
       theme(text = element_text(size = 14)) 
     print(chem_count_map)
   })
